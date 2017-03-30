@@ -19,92 +19,132 @@ public class Structurizr {
     }
 
     private static final String DATABASE_TAG = "Database";
+    private static final String MICROSERVICE_TAG = "Microservice";
 
-    public static Workspace create() {
+    private static Workspace create() {
         Workspace workspace = new Workspace("Smart Mobility", "Real-time ridesharing service.");
         Model model = workspace.getModel();
 
-        Person driver = model.addPerson("Driver user", "A user (student/teacher) that wants to share his trip.");
-        Person passenger = model.addPerson("Passenger user", "A user (student/teacher) that wants to travel.");
+        //Actors
+        Person driver = model.addPerson("Driver user", "A student or teacher");
+        Person passenger = model.addPerson("Passenger user", "A student or teacher");
         Person admin = model.addPerson("Administrator user", "A system administrator user.");
 
+        //Build general software system
         SoftwareSystem softwareSystem = model.addSoftwareSystem("Software System", "A real-time ride sharing service");
         driver.uses(softwareSystem, "Registers trips");
         passenger.uses(softwareSystem, "Finds travel plans and registers trip");
         admin.uses(softwareSystem, "Monitors the system.");
 
-        SoftwareSystem transport = model.addSoftwareSystem("Public transport API", "Returns buss and train information.");
-        softwareSystem.uses(transport, "Fetches public transportation from");
+        //Add external software systems this software system uses.
+        SoftwareSystem publicTransportApi = model.addSoftwareSystem("Public transport API", "Returns buss and train information.");
+        softwareSystem.uses(publicTransportApi, "Fetches public transportation from");
 
         SoftwareSystem sas = model.addSoftwareSystem("SAS Rooster", "Contains the calendar of a student/teacher");
         softwareSystem.uses(sas, "Fetches the appointments/classes using a webcal feed from");
 
+        //Build mobile app.
         Container mobileApplication = softwareSystem.addContainer("Smart Mobility mobile APP", "The Smart Mobility mobile APP allows users to interface the Smart Mobility API on their mobile phones.", "Android React app");
-        Container backendForFrontend = softwareSystem.addContainer("Smart Mobility API", "The Smart Mobility mobile APP allows users to register trips, plan/register for travel plans and monitor the total system.", "Spring MVC on Apache Tomcat");
-        Container database = softwareSystem.addContainer("Database", "Stores interesting data.", "MySQL");
-        database.addTags(DATABASE_TAG);
-
         driver.uses(mobileApplication, "Registers trips");
         passenger.uses(mobileApplication, "Finds travel plans and registers trip");
         admin.uses(mobileApplication, "Monitors the system.");
+        mobileApplication.uses(sas, "Fetches the appointments/classes using a webcal feed from");
 
-        mobileApplication.uses(backendForFrontend, "Uses", "HTTPS");
-        backendForFrontend.uses(database, "Reads from and writes to", "JDBC");
+        //Build gateway
+        Container gateway = softwareSystem.addContainer("Smart Mobility API gateway", "The Smart Mobility mobile APP allows users to register trips, plan/register for travel plans and monitor the total system.", "Spring MVC on Apache Tomcat");
+        gateway.addTags(MICROSERVICE_TAG);
+        mobileApplication.uses(gateway, "Uses", "HTTPS");
 
-        Component someController = backendForFrontend.addComponent("Some Controller", "A description of some controller.", "Spring MVC RestController");
-        Component someService = backendForFrontend.addComponent("Some Service", "A description of some service.", "Spring Bean");
-        Component someRepository = backendForFrontend.addComponent("Some Repository", "A description of some repository.", "Spring Data");
+        //travelPlan service
+        Container travelPlanService = softwareSystem.addContainer("Travel plan Service", "The point of access for information.", "Java and Spring Boot");
+        travelPlanService.addTags(MICROSERVICE_TAG);
+        travelPlanService.uses(publicTransportApi, "Fetches public transportation from", "JSON/HTTPS");
+        gateway.uses(travelPlanService, "Fetches travel plans information using", "JSON/HTTPS", InteractionStyle.Synchronous);
 
-        mobileApplication.uses(someController, "Uses", "JSON/HTTPS");
-        someController.uses(someService, "Uses");
-        someService.uses(someRepository, "Uses");
-        someRepository.uses(database, "Reads to and writes from", "JDBC");
+        //Registered trips database
+        Container customerDatabase = softwareSystem.addContainer("Trip Database", "Stores registered trips.", "MySQL");
+        customerDatabase.addTags(DATABASE_TAG);
+        travelPlanService.uses(customerDatabase, "Reads to and writes from", "JDBC", InteractionStyle.Synchronous);
 
-        // create some views
+        //User service
+        Container userService = softwareSystem.addContainer("User Service", "The point of access for user information.", "Java and Spring Boot");
+        userService.addTags(MICROSERVICE_TAG);
+        gateway.uses(userService, "Fetches user information using", "JSON/HTTPS", InteractionStyle.Synchronous);
+
+        //User database
+        Container userDatabase = softwareSystem.addContainer("User Database", "Stores user information.", "MySQL");
+        userDatabase.addTags(DATABASE_TAG);
+        userService.uses(userDatabase, "Reads to and writes from", "JDBC", InteractionStyle.Synchronous);
+
+        //Describe components in mobile app.
+//        Component homeController = mobileApplication.addComponent("Some Controller", "A description of some controller.", "Spring MVC RestController");
+
+        //Describe components in gateway.
+//        Component someController = gateway.addComponent("Some Controller", "A description of some controller.", "Spring MVC RestController");
+//        Component someService = gateway.addComponent("Some Service", "A description of some service.", "Spring Bean");
+//        Component someRepository = gateway.addComponent("Some Repository", "A description of some repository.", "Spring Data");
+//        mobileApplication.uses(someController, "Uses", "JSON/HTTPS");
+//        someController.uses(someService, "Uses");
+//        someService.uses(someRepository, "Uses");
+
+        //
+        // Create the views
+        //
         ViewSet viewSet = workspace.getViews();
+
+        //Context
         SystemContextView contextView = viewSet.createSystemContextView(softwareSystem, "Context", "System context diagram for the Smart Mobility project.");
         contextView.addAllSoftwareSystems();
         contextView.addAllPeople();
         contextView.setPaperSize(PaperSize.A5_Landscape);
 
+        //Containers
         ContainerView containerView = viewSet.createContainerView(softwareSystem, "Containers", "Container diagram for the Smart Mobility project.");
         containerView.addAllPeople();
         containerView.addAllContainers();
         containerView.setPaperSize(PaperSize.A5_Landscape);
 
-        ComponentView componentView = viewSet.createComponentView(backendForFrontend, "Components", "Components diagram for the Smart Mobility project.");
-        componentView.addAllContainers();
-        componentView.addAllComponents();
-        componentView.setPaperSize(PaperSize.A5_Landscape);
+
+//        ComponentView componentViewFrontend = viewSet.createComponentView(mobileApplication, "Components frontend", "Components diagram for the frontend of the Smart Mobility project.");
+//        componentViewFrontend.addAllContainers();
+//        componentViewFrontend.addAllComponents();
+////        componentViewFrontend.remove(database);
+//        componentViewFrontend.setPaperSize(PaperSize.A5_Landscape);
+
+//        ComponentView componentViewBackend = viewSet.createComponentView(gateway, "Components backend", "Components diagram for the backend of the Smart Mobility project.");
+//        componentViewBackend.addAllContainers();
+//        componentViewBackend.addAllComponents();
+//        componentViewBackend.setPaperSize(PaperSize.A5_Landscape);
 
         // tag and style some elements
         Styles styles = viewSet.getConfiguration().getStyles();
-        styles.addElementStyle(Tags.ELEMENT).color("#ffffff").width(650).height(400).fontSize(36);
-        styles.addElementStyle(Tags.SOFTWARE_SYSTEM).background("#1168bd");
-        styles.addElementStyle(Tags.CONTAINER).background("#438dd5");
-        styles.addElementStyle(Tags.COMPONENT).background("#85bbf0").color("#000000");
-        styles.addRelationshipStyle(Tags.RELATIONSHIP).thickness(5).routing(Routing.Direct).fontSize(32).width(400);
+        styles.addElementStyle(Tags.ELEMENT).color("#000000");
+        styles.addElementStyle(Tags.PERSON).background("#ffbf00").shape(Shape.Person);
+        styles.addElementStyle(Tags.CONTAINER).background("#facc2E");
+        styles.addElementStyle(MICROSERVICE_TAG).shape(Shape.Hexagon);
+        styles.addElementStyle(DATABASE_TAG).background("#f5da81").shape(Shape.Cylinder);
+//        styles.addRelationshipStyle(Tags.RELATIONSHIP).routing(Routing.Orthogonal);
 
-        styles.addElementStyle(Tags.PERSON).background("#08427b").width(550).shape(Shape.Person);
-        styles.addElementStyle(DATABASE_TAG).shape(Shape.Cylinder);
+        styles.addRelationshipStyle(Tags.ASYNCHRONOUS).dashed(true);
+        styles.addRelationshipStyle(Tags.SYNCHRONOUS).dashed(false);
 
         // add some documentation
         StructurizrDocumentation documentation = new StructurizrDocumentation(model);
         workspace.setDocumentation(documentation);
-        documentation.addContextSection(softwareSystem, Format.Markdown,
-                "Here is some context about the software system...\n" +
-                        "\n" +
-                        "![](embed:Context)");
-        documentation.addContainersSection(softwareSystem, Format.Markdown,
-                "Here is some information about the containers...\n" +
-                        "\n" +
-                        "![](embed:Containers)");
-        documentation.addComponentsSection(backendForFrontend, Format.Markdown,
-                "Here is some information about the Backend for Frontend...\n" +
-                        "\n" +
-                        "![](embed:Components)");
-        documentation.addCodeSection(someController, Format.Markdown,
-                "Here is some information about the SomeController component...");
+//        documentation.addContextSection(softwareSystem, Format.Markdown,
+//                "Here is some context about the software system...\n" +
+//                        "\n" +
+//                        "![](embed:Context)");
+//        documentation.addContainersSection(softwareSystem, Format.Markdown,
+//                "Here is some information about the containers...\n" +
+//                        "\n" +
+//                        "![](embed:Containers)");
+//        documentation.addComponentsSection(backendForFrontend, Format.Markdown,
+//                "Here is some information about the Backend for Frontend...\n" +
+//                        "\n" +
+//                        "![](embed:Components)");
+//        documentation.addCodeSection(someController, Format.Markdown,
+//                "Here is some information about the SomeController component...");
 
         return workspace;
     }
