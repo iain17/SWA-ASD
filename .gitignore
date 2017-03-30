@@ -5,3 +5,4 @@
 
 build
 structur*.json
+/src/main/java/com/mycompany/mysystem/Private.java
