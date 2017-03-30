@@ -1,3 +1,3 @@
-# Structurizr for Java starter
+# Structurizr the ASD project
 
-This is a simple starting point for using [Structurizr for Java](https://github.com/structurizr/java).
+See the live [result](https://www.structurizr.com/share/29991)
