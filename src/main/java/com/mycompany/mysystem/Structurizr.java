@@ -77,7 +77,7 @@ public class Structurizr {
         userService.uses(userDatabase, "Reads to and writes from", "JDBC", InteractionStyle.Synchronous);
 
         //Describe components in mobile app.
-//        Component homeController = mobileApplication.addComponent("Some Controller", "A description of some controller.", "Spring MVC RestController");
+        Component homeController = mobileApplication.addComponent("Some Controller", "A description of some controller.", "iOS UIViewController");
 
         //Describe components in gateway.
 //        Component someController = gateway.addComponent("Some Controller", "A description of some controller.", "Spring MVC RestController");
@@ -102,14 +102,13 @@ public class Structurizr {
         ContainerView containerView = viewSet.createContainerView(softwareSystem, "Containers", "Container diagram for the Smart Mobility project.");
         containerView.addAllPeople();
         containerView.addAllContainers();
+        containerView.addAllElements();
         containerView.setPaperSize(PaperSize.A5_Landscape);
 
 
-//        ComponentView componentViewFrontend = viewSet.createComponentView(mobileApplication, "Components frontend", "Components diagram for the frontend of the Smart Mobility project.");
-//        componentViewFrontend.addAllContainers();
-//        componentViewFrontend.addAllComponents();
-////        componentViewFrontend.remove(database);
-//        componentViewFrontend.setPaperSize(PaperSize.A5_Landscape);
+        ComponentView componentViewFrontMobileApp = viewSet.createComponentView(mobileApplication, "Components mobile application", "Components diagram for the frontend of the Smart Mobility project.");
+        componentViewFrontMobileApp.addAllComponents();
+        componentViewFrontMobileApp.setPaperSize(PaperSize.A5_Landscape);
 
 //        ComponentView componentViewBackend = viewSet.createComponentView(gateway, "Components backend", "Components diagram for the backend of the Smart Mobility project.");
 //        componentViewBackend.addAllContainers();
